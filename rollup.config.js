@@ -16,9 +16,9 @@ function binaryToBlob(options = {}) {
             return;
           }
 
-          const octetsArray = data.toJSON().data;
+          const octetsArray = data.toJSON().data.map(b => `0x${b.toString(16)}`).join(',');
           resolve({
-            code: `export default Uint8Array.from(${JSON.stringify(octetsArray)}).buffer;`,
+            code: `export default Uint8Array.from([${octetsArray}]).buffer;`,
             map: { mappings: '' },
           });
         });
