@@ -1,6 +1,6 @@
-// rollup.config.js
 import svelte from 'rollup-plugin-svelte';
 import buble from 'rollup-plugin-buble';
+import string from 'rollup-plugin-string';
 
 export default {
   entry: 'src/main.js',
@@ -9,6 +9,9 @@ export default {
   plugins: [
     svelte({
       include: 'src/components/**.html',
+    }),
+    string({
+      include: 'src/**/*.gz',
     }),
     buble(),
   ],

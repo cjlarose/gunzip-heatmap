@@ -1,8 +1,16 @@
-import HelloWorld from './components/hello_world.html'
+import HelloWorld from './components/hello_world.html';
+import fish from './examples/fish.txt.gz';
 
-var app = new HelloWorld({
-  target: document.querySelector( 'main' ),
+console.log(fish);
+
+const app = new HelloWorld({
+  target: document.querySelector('main'),
   data: {
-    name: 'world'
-  }
+    name: 'world',
+    files: {
+      'fish': fish,
+    },
+  },
 });
+
+window.app = app;
