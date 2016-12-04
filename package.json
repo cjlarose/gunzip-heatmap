@@ -9,7 +9,9 @@
   },
   "devDependencies": {
     "rollup": "^0.36.4",
+    "rollup-plugin-buble": "^0.14.0",
     "rollup-plugin-svelte": "^1.0.0",
     "svelte-cli": "^1.0.2"
-  }
+  },
+  "dependencies": {}
 }
