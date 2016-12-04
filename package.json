@@ -1,0 +1,10 @@
+{
+  "name": "gunzip-heatmap",
+  "version": "1.0.0",
+  "main": "index.js",
+  "author": "Chris LaRose",
+  "license": "MIT",
+  "devDependencies": {
+    "svelte-cli": "^1.0.2"
+  }
+}
