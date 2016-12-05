@@ -1,7 +1,9 @@
 import App from './components/app.html';
 import fish from './examples/fish.txt.gz';
+import gzip from './gzip';
 
 console.log(fish);
+console.log(gzip(fish));
 
 const app = new App({
   target: document.querySelector('main'),
