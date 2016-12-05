@@ -1,0 +1,61 @@
+<h1>
+  gunzip-heatmap
+</h1>
+
+<div class="heatmap">
+  <ul>
+    {{#each octets as octet}}
+    <li class="{{ classForNumBits(octet.numBits) }}">
+      {{ formatOctet(octet.data) }}
+    </li>
+    {{/each}}
+  </ul>
+</div>
+
+<style>
+ul {
+  margin: 0;
+  padding: 0;
+  font-family: monospace;
+}
+
+li {
+  display: inline-block;
+  text-align: center;
+  line-height: 18px;
+  width: 18px;
+  height: 18px;
+  background-color: #000000;
+  color: #ffffff;
+}
+
+.fewer-than-1-bits { color: #000000; background-color: #fff7ec; }
+.fewer-than-2-bits { color: #000000; background-color: #fee8c8; }
+.fewer-than-3-bits { color: #000000; background-color: #fdd49e; }
+.fewer-than-4-bits { color: #000000; background-color: #fdbb84; }
+.fewer-than-5-bits { color: #000000; background-color: #fc8d59; }
+.fewer-than-6-bits { color: #000000; background-color: #ef6548; }
+.fewer-than-7-bits { color: #000000; background-color: #d7301f; }
+.fewer-than-8-bits { color: #000000; background-color: #b30000; }
+.fewer-than-9-bits { color: #ffffff; background-color: #7f0000; }
+</style>
+
+<script>
+export default {
+  helpers: {
+    formatOctet(c) {
+      if (c == 32) {
+        return '\u00a0';
+      }
+
+      const isPrintableAscii = c >= 32 && c <= 126;
+      return isPrintableAscii ? String.fromCharCode(c) : '.';
+    },
+
+    classForNumBits(num) {
+      const floored = Math.floor(num);
+      return `fewer-than-${floored + 1}-bits`;
+    }
+  },
+};
+</script>
