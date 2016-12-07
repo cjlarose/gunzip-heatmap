@@ -72,7 +72,7 @@ function flags() {
     });
 }
 
-function mtime() {
+function modifiedTime() {
   return view =>
     new Promise((resolve, reject) => {
       if (view.byteLength < 4) {
@@ -92,7 +92,7 @@ function mtime() {
     });
 }
 
-function os() {
+function operatingSystem() {
   return view =>
     new Promise((resolve, reject) => {
       if (view.byteLength === 0) {
@@ -163,23 +163,81 @@ function then(p1, p2) {
 
 function seq(...args) {
   return (view) => {
-    let promise = Promise.resolve({ results: [], rest: view });
+    let promise = Promise.resolve({ value: [], rest: view });
     for (let i = 0; i < args.length; i += 1) {
-      promise = promise.then(({ results, rest }) =>
+      promise = promise.then(({ value, rest }) =>
         args[i](rest).then(newParse =>
-          ({ results: [...results, newParse.value], rest: newParse.rest })));
+          ({ value: [...value, newParse.value], rest: newParse.rest })));
     }
     return promise;
   };
 }
 
-function gzip(input) {
-  const inputView = new DataView(input);
+function chain(parser, nextParserFn) {
+  return view =>
+    parser(view).then(({ value, rest }) => nextParserFn(value)(rest));
+}
+
+function mapValue(parser, transform) {
+  return view => parser(view).then(({ value, rest }) => ({ value: transform(value), rest }));
+}
+
+function headerToObj([cm, flg, mtime, xfl, os]) {
+  return { cm, flg, mtime, xfl, os };
+}
+
+function deflate() {
+  return view =>
+    new Promise((resolve, reject) => {
+      resolve({ value: 'TODO', rest: view });
+    });
+}
+
+function nullTerminatedString() {
+  return view =>
+    new Promise((resolve, reject) => {
+      for (let i = 0; i < view.byteLength; i += 1) {
+        const endOffset = view.byteOffset + i;
+        if (view.getUint8(i) === 0) {
+          const chars = new Uint8Array(view.buffer, view.byteOffset, i);
+          // TODO: Read as iso8601 instead of ascii
+          const value = String.fromCharCode.apply(null, chars);
+          const rest = new DataView(view.buffer, endOffset + 1);
+          resolve({ value, rest });
+          return;
+        }
+      }
+      reject('Unexepcted end of input');
+    });
+}
+
+function succeed(value) {
+  return view => Promise.resolve({ value, rest: view });
+}
+
+function parserFromHeader(header) {
+  if (header.cm !== 8) {
+    throw new Error(`Unknown compression method ${header.cm}`);
+  }
+
+  let parser = succeed();
+
+  // TODO: handle flags FEXTRA, FCOMMENT, FHCRC
+  if (header.flg.FNAME) {
+    parser = then(parser, nullTerminatedString());
+  }
+
+  return parser;
+  //return seq(parser, deflate());
+}
+
+function gzip() {
   const magicHeader = string(Uint8Array.from([0x1f, 0x8b]).buffer);
   const compressionMethod = anyByte;
   const extraFlags = anyByte;
-  const memberHeader = then(magicHeader, seq(compressionMethod(), flags(), mtime(), extraFlags(), os()));
-  return memberHeader(inputView);
+  const headerParser = mapValue(then(magicHeader, seq(compressionMethod(), flags(), modifiedTime(), extraFlags(), operatingSystem())), headerToObj);
+  //return headerParser;
+  return chain(headerParser, parserFromHeader);
 }
 
 export default gzip;

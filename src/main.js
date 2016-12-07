@@ -3,7 +3,10 @@ import fish from './examples/fish.txt.gz';
 import gzip from './gzip';
 
 console.log(fish);
-console.log(gzip(fish));
+gzip()(new DataView(fish)).then(({ value, rest }) => {
+  console.log('value', value);
+  console.log('rest', rest);
+});
 
 const app = new App({
   target: document.querySelector('main'),
