@@ -2,18 +2,17 @@ export function succeed(value) {
   return view => Promise.resolve({ value, rest: view });
 }
 
-export function anyByte() {
-  return view =>
-    new Promise((resolve, reject) => {
-      if (view.byteLength === 0) {
-        reject('End of input');
-        return;
-      }
+export function anyByte(view) {
+  return new Promise((resolve, reject) => {
+    if (view.byteLength === 0) {
+      reject('End of input');
+      return;
+    }
 
-      const firstByte = view.getUint8(0);
-      const rest = new DataView(view.buffer, view.byteOffset + 1);
-      resolve({ value: firstByte, rest });
-    });
+    const firstByte = view.getUint8(0);
+    const rest = new DataView(view.buffer, view.byteOffset + 1);
+    resolve({ value: firstByte, rest });
+  });
 }
 
 function dataviewsEqual(a, b) {
@@ -53,22 +52,21 @@ export function string(expected) { // input buffer
     });
 }
 
-export function nullTerminatedString() {
-  return view =>
-    new Promise((resolve, reject) => {
-      for (let i = 0; i < view.byteLength; i += 1) {
-        const endOffset = view.byteOffset + i;
-        if (view.getUint8(i) === 0) {
-          const chars = new Uint8Array(view.buffer, view.byteOffset, i);
-          // TODO: Read as iso8601 instead of ascii
-          const value = String.fromCharCode.apply(null, chars);
-          const rest = new DataView(view.buffer, endOffset + 1);
-          resolve({ value, rest });
-          return;
-        }
+export function nullTerminatedString(view) {
+  return new Promise((resolve, reject) => {
+    for (let i = 0; i < view.byteLength; i += 1) {
+      const endOffset = view.byteOffset + i;
+      if (view.getUint8(i) === 0) {
+        const chars = new Uint8Array(view.buffer, view.byteOffset, i);
+        // TODO: Read as iso8601 instead of ascii
+        const value = String.fromCharCode.apply(null, chars);
+        const rest = new DataView(view.buffer, endOffset + 1);
+        resolve({ value, rest });
+        return;
       }
-      reject('Unexepcted end of input');
-    });
+    }
+    reject('Unexepcted end of input');
+  });
 }
 
 export function mapValue(parser, transform) {

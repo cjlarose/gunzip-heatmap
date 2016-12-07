@@ -3,7 +3,7 @@ import fish from './examples/fish.txt.gz';
 import gzip from './gzip';
 
 console.log(fish);
-gzip()(new DataView(fish)).then(({ value, rest }) => {
+gzip(new DataView(fish)).then(({ value, rest }) => {
   console.log('value', value);
   console.log('rest', rest);
 });
