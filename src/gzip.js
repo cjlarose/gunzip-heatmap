@@ -1,54 +1,4 @@
-function dataviewsEqual(a, b) {
-  if (a.byteLength !== b.byteLength) {
-    return false;
-  }
-
-  const aBytes = new Uint8Array(a);
-  const bBytes = new Uint8Array(b);
-
-  for (let i = 0; i < a.byteLength; i += 1) {
-    if (aBytes[i] !== bBytes[i]) {
-      return false;
-    }
-  }
-
-  return true;
-}
-
-
-function string(expected) { // input buffer
-  return view => // input DataView
-    new Promise((resolve, reject) => {
-      if (view.byteLength < expected.byteLength) {
-        reject('Input shorter than expected');
-        return;
-      }
-
-      const expectedView = new DataView(expected);
-      const actual = new DataView(view.buffer, view.byteOffset, expected.byteLength);
-
-      if (dataviewsEqual(expectedView, actual)) {
-        const rest = new DataView(view.buffer, view.byteOffset + expected.byteLength);
-        resolve({ value: actual, rest });
-      } else {
-        reject(`Expected ${expectedView}, found ${actual}`);
-      }
-    });
-}
-
-function anyByte() {
-  return view =>
-    new Promise((resolve, reject) => {
-      if (view.byteLength === 0) {
-        reject('End of input');
-        return;
-      }
-
-      const firstByte = view.getUint8(0);
-      const rest = new DataView(view.buffer, view.byteOffset + 1);
-      resolve({ value: firstByte, rest });
-    });
-}
+import { string, anyByte, mapValue, then, seq, chain, succeed, nullTerminatedString } from './parse';
 
 function flags() {
   return view =>
@@ -156,63 +106,11 @@ function operatingSystem() {
     });
 }
 
-function then(p1, p2) {
-  return view =>
-    p1(view).then(({ rest }) => p2(rest));
-}
-
-function seq(...args) {
-  return (view) => {
-    let promise = Promise.resolve({ value: [], rest: view });
-    for (let i = 0; i < args.length; i += 1) {
-      promise = promise.then(({ value, rest }) =>
-        args[i](rest).then(newParse =>
-          ({ value: [...value, newParse.value], rest: newParse.rest })));
-    }
-    return promise;
-  };
-}
-
-function chain(parser, nextParserFn) {
-  return view =>
-    parser(view).then(({ value, rest }) => nextParserFn(value)(rest));
-}
-
-function mapValue(parser, transform) {
-  return view => parser(view).then(({ value, rest }) => ({ value: transform(value), rest }));
-}
-
-function headerToObj([cm, flg, mtime, xfl, os]) {
-  return { cm, flg, mtime, xfl, os };
-}
-
 function deflate() {
   return view =>
     new Promise((resolve, reject) => {
       resolve({ value: 'TODO', rest: view });
     });
-}
-
-function nullTerminatedString() {
-  return view =>
-    new Promise((resolve, reject) => {
-      for (let i = 0; i < view.byteLength; i += 1) {
-        const endOffset = view.byteOffset + i;
-        if (view.getUint8(i) === 0) {
-          const chars = new Uint8Array(view.buffer, view.byteOffset, i);
-          // TODO: Read as iso8601 instead of ascii
-          const value = String.fromCharCode.apply(null, chars);
-          const rest = new DataView(view.buffer, endOffset + 1);
-          resolve({ value, rest });
-          return;
-        }
-      }
-      reject('Unexepcted end of input');
-    });
-}
-
-function succeed(value) {
-  return view => Promise.resolve({ value, rest: view });
 }
 
 function parserFromHeader(header) {
@@ -231,12 +129,20 @@ function parserFromHeader(header) {
   //return seq(parser, deflate());
 }
 
+function headerToObj([cm, flg, mtime, xfl, os]) {
+  return { cm, flg, mtime, xfl, os };
+}
+
 function gzip() {
   const magicHeader = string(Uint8Array.from([0x1f, 0x8b]).buffer);
   const compressionMethod = anyByte;
   const extraFlags = anyByte;
-  const headerParser = mapValue(then(magicHeader, seq(compressionMethod(), flags(), modifiedTime(), extraFlags(), operatingSystem())), headerToObj);
-  //return headerParser;
+  const headerPrologue = seq(compressionMethod(),
+                             flags(),
+                             modifiedTime(),
+                             extraFlags(),
+                             operatingSystem());
+  const headerParser = mapValue(then(magicHeader, headerPrologue), headerToObj);
   return chain(headerParser, parserFromHeader);
 }
 
